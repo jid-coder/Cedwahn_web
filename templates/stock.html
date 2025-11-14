@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="brand">Cedwahn</div>
+        <nav>
+          <a href="{{ url_for('dashboard') }}"><i data-feather="home"></i>Dashboard</a>
+          <a href="{{ url_for('items') }}"><i data-feather="box"></i>Items</a>
+          <a href="{{ url_for('stock') }}" class="active"><i data-feather="shuffle"></i>Stock</a>
+          <a href="{{ url_for('suppliers_page') }}"><i data-feather="users"></i>Suppliers</a>
+          <a href="{{ url_for('reports') }}"><i data-feather="bar-chart-2"></i>Reports</a>
+          <a href="{{ url_for('logout') }}"><i data-feather="log-out"></i>Logout</a>
+        </nav>
+      </aside>
+      <main class="content">
+        <h2><i data-feather="shuffle"></i> Stock Movements</h2>
+        <form method="post" action="{{ url_for('stock') }}" class="card">
+            <div class="grid-2">
+                <div>
+                    <label for="item_id">Item</label>
+                    <select id="item_id" name="item_id" title="Item" required>
+                        {% for i in items %}
+                        <option value="{{ i.id }}">{{ i.name }} ({{ i.qty }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="change">Change</label>
+                    <input id="change" name="change" placeholder="e.g. 5 or -3" type="number" title="Change" required>
+                </div>
+                <div class="span-2">
+                    <label for="note">Note</label>
+                    <input id="note" name="note" type="text" title="Note">
+                </div>
+            </div>
+            <button type="submit">Apply</button>
+        </form>
+
+        <table class="card">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Item</th>
+                    <th>Change</th>
+                    <th>Note</th>
+                    <th>When</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in movements %}
+                <tr>
+                    <td>{{ m.id }}</td>
+                    <td>{{ m.item_name }}</td>
+                    <td>{{ m.change }}</td>
+                    <td>{{ m.note }}</td>
+                    <td>{{ m.created_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+      </main>
+    </div>
+    <script src="/static/script.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script>try{feather.replace()}catch(e){}</script>
+</body>
+</html>

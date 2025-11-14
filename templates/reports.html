@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="brand">Cedwahn</div>
+        <nav>
+          <a href="{{ url_for('dashboard') }}"><i data-feather="home"></i>Dashboard</a>
+          <a href="{{ url_for('items') }}"><i data-feather="box"></i>Items</a>
+          <a href="{{ url_for('stock') }}"><i data-feather="shuffle"></i>Stock</a>
+          <a href="{{ url_for('suppliers_page') }}"><i data-feather="users"></i>Suppliers</a>
+          <a href="{{ url_for('reports') }}" class="active"><i data-feather="bar-chart-2"></i>Reports</a>
+          <a href="{{ url_for('logout') }}"><i data-feather="log-out"></i>Logout</a>
+        </nav>
+      </aside>
+      <main class="content">
+        <h2><i data-feather="bar-chart-2"></i> Reports</h2>
+        <form method="get" action="{{ url_for('reports') }}" class="card">
+            <div class="grid-2">
+                <div>
+                    <label for="filter_item">Item</label>
+                    <select id="filter_item" name="item_id" title="Report item">
+                        <option value="">All</option>
+                        {% for i in items %}
+                        <option value="{{ i.id }}">{{ i.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="filter_start">Start</label>
+                    <input id="filter_start" type="datetime-local" name="start" title="Start time">
+                </div>
+                <div>
+                    <label for="filter_end">End</label>
+                    <input id="filter_end" type="datetime-local" name="end" title="End time">
+                </div>
+            </div>
+            <button type="submit">Filter</button>
+        </form>
+
+        <table class="card">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Item</th>
+                    <th>Change</th>
+                    <th>Note</th>
+                    <th>When</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in movements %}
+                <tr>
+                    <td>{{ m.id }}</td>
+                    <td>{{ m.item_name }}</td>
+                    <td>{{ m.change }}</td>
+                    <td>{{ m.note }}</td>
+                    <td>{{ m.created_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="card export-card"></div>
+            <button id="exportPdfBtn"><i data-feather="download"></i> Export PDF</button>
+            <div id="pdfLink"></div>
+        </div>
+      </main>
+    </div>
+    <script src="/static/script.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script>try{feather.replace()}catch(e){}</script>
+    <script>
+    document.getElementById('exportPdfBtn').addEventListener('click', async () => {
+      const res = await fetch('/export_report');
+      const json = await res.json();
+      if (json.status === 'ok') {
+        const linkHtml = `<a target="_blank" href="${json.path}">Download report PDF</a>`;
+        document.getElementById('pdfLink').innerHTML = linkHtml;
+      } else {
+        alert('Export failed');
+      }
+    });
+    </script>
+</body>
+</html>
