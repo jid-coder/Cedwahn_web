@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<html>
+<head>
+  <title>Settings - Cedwahn IMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">Cedwahn</div>
+      <nav>
+        <a href="{{ url_for('dashboard') }}"><i data-feather="home"></i>Dashboard</a>
+        <a href="{{ url_for('items') }}"><i data-feather="box"></i>Items</a>
+        <a href="{{ url_for('stock') }}"><i data-feather="shuffle"></i>Stock</a>
+        <a href="{{ url_for('suppliers_page') }}" class="users"><i data-feather="users"></i>Suppliers</a>
+        <a href="{{ url_for('reports') }}"><i data-feather="bar-chart-2"></i>Reports</a>
+        <a href="{{ url_for('logout') }}"><i data-feather="log-out"></i>Logout</a>
+        <a href="{{ url_for('settings') }}" class="active"><i data-feather="settings"></i>Settings</a>
+      </nav>
+    </aside>
+    <main class="content">
+        <div class="container">
+            <h2>Settings</h2>
+
+            {% if success %}
+                <div class="success">{{ success }}</div>
+            {% endif %}
+            {% if error %}
+                <div class="error">{{ error }}</div>
+            {% endif %}
+            
+            <div class="card">
+            <h3>Change Password</h3>
+            <form method="POST">
+                <label>New Password</label>
+                <input type="password" name="new_password" title="New Password" placeholder="Enter new password" required>
+
+                <label>Confirm Password</label>
+                <input type="password" name="confirm_password" title="Confirm Password" placeholder="Confirm new password" required>
+
+                <button type="submit">Update Password</button>
+            </form>
+
+            <hr>
+            <h3>Account Information</h3>
+
+            <div class="card">
+                <p><strong>Username:</strong> {{ user['username'] }}</p>
+                <p><strong>User ID:</strong> {{ user['id'] }}</p>
+
+            </div>
+
+            <a href="/dashboard" class="toggle-btn">Dashboard</a>
+            <a href="/reset_db" class="danger-button">Reset Database</a>
+            </div>
+        </div>
+    </main>
+  </div>
+    <script src="/static/script.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script>try{feather.replace()}catch(e){}</script>
+</body>
+</html>

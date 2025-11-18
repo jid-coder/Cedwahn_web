@@ -440,6 +440,50 @@ def reports():
     conn.close()
     return render_template("reports.html", items=items, movements=movements)
 
+@app.route('/settings', methods=['GET', 'POST'])
+def settings():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    db = get_db()
+    user_id = session['user_id']
+
+    # Fetch user info
+    user = db.execute("SELECT id, username FROM users WHERE id=?", (user_id,)).fetchone()
+
+
+    success = None
+    error = None
+
+    if request.method == 'POST':
+        new_password = request.form.get('new_password')
+        confirm = request.form.get('confirm_password')
+
+        if new_password or confirm:
+            if new_password != confirm:
+                error = "Passwords do not match."
+            else:
+                hashed = generate_password_hash(new_password)
+                db.execute("UPDATE users SET password_hash=? WHERE id=?", (hashed, user_id))
+                db.commit()
+                success = "Password updated successfully."
+
+    return render_template('settings.html', user=user, success=success, error=error)
+
+
+@app.route('/reset_db')
+def reset_db():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    db = get_db()
+    db.execute("DELETE FROM items")
+    db.execute("DELETE FROM suppliers")
+    db.execute("DELETE FROM stock_transactions")
+    db.commit()
+
+    return redirect(url_for('settings'))
+
 if __name__ == "__main__":
     init_db()
     app.run(host="127.0.0.1", port=5000, debug=True)
