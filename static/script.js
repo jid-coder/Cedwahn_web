@@ -6,6 +6,7 @@ async function loadItems() {
     tbody.innerHTML = '';
     data.forEach(i => {
       const tr = document.createElement('tr');
+      const actionHtml = (window.isAdmin ? `<button onclick="deleteItem(${i.id})"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3v3H4v2h16V6h-6V3z"></path><path d="M5 9l1 12h12l1-12H5z"></path></svg>Delete</button>` : '');
       tr.innerHTML = `
         <td>${i.id}</td>
         <td>${i.name}</td>
@@ -14,7 +15,7 @@ async function loadItems() {
         <td>${i.reorder_level || 5}</td>
         <td>${i.price || 0}</td>
         <td>${i.supplier_name || ''}</td>
-        <td><button onclick="deleteItem(${i.id})"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3v3H4v2h16V6h-6V3z"></path><path d="M5 9l1 12h12l1-12H5z"></path></svg>Delete</button></td>
+        <td>${actionHtml}</td>
       `;
       tbody.appendChild(tr);
     });

@@ -94,13 +94,18 @@ def init_db():
     if "description" not in cols:
         cur.execute("ALTER TABLE items ADD COLUMN description TEXT")
 
-    cur.execute("SELECT id, password_hash FROM users WHERE username=?", ("admin",))
+    cur.execute("PRAGMA table_info(users)")
+    ucols = {row[1] for row in cur.fetchall()}
+    if "role" not in ucols:
+        cur.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'staff'")
+
+    cur.execute("SELECT id, password_hash, role FROM users WHERE username=?", ("admin",))
     row = cur.fetchone()
     if not row:
         h = generate_password_hash("admin123", method="pbkdf2:sha256", salt_length=8)
         cur.execute(
-            "INSERT INTO users(username, password_hash) VALUES(?, ?)",
-            ("admin", h),
+            "INSERT INTO users(username, password_hash, role) VALUES(?, ?, ?)",
+            ("admin", h, "admin"),
         )
     else:
         try:
@@ -110,6 +115,7 @@ def init_db():
         if not ok:
             h = generate_password_hash("admin123", method="pbkdf2:sha256", salt_length=8)
             cur.execute("UPDATE users SET password_hash=? WHERE id=?", (h, row["id"]))
+        cur.execute("UPDATE users SET role='admin' WHERE username='admin'")
     conn.commit()
     conn.close()
 
@@ -118,6 +124,14 @@ def login_required(f):
     def wrapper(*args, **kwargs):
         if "user_id" not in session:
             return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return wrapper
+
+def admin_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if session.get("role") != "admin":
+            return redirect(url_for("dashboard"))
         return f(*args, **kwargs)
     return wrapper
 
@@ -141,7 +155,7 @@ def login():
         password = request.form.get("password", "")
         conn = get_db()
         cur = conn.cursor()
-        cur.execute("SELECT id, password_hash FROM users WHERE username=?", (username,))
+        cur.execute("SELECT id, password_hash, role FROM users WHERE username=?", (username,))
         user = cur.fetchone()
         conn.close()
         valid = False
@@ -156,6 +170,7 @@ def login():
             session.clear()
             session["user_id"] = user["id"]
             session["username"] = username
+            session["role"] = user["role"]
             return redirect(url_for("dashboard"))
         error = "Invalid username or password"
 
@@ -222,7 +237,7 @@ def items_create():
     return redirect(url_for("items"))
 
 @app.route("/items/<int:item_id>/delete", methods=["POST"]) 
-@login_required
+@admin_required
 def items_delete(item_id):
     conn = get_db()
     cur = conn.cursor()
@@ -352,6 +367,7 @@ def api_add_item():
     return jsonify({"status": "ok"})
 
 @app.route('/api/items/<int:item_id>', methods=['DELETE'])
+@admin_required
 def api_delete_item(item_id):
     conn = get_db()
     cur = conn.cursor()
@@ -472,6 +488,7 @@ def settings():
 
 
 @app.route('/reset_db')
+@admin_required
 def reset_db():
     if 'user_id' not in session:
         return redirect(url_for('login'))

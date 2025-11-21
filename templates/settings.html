@@ -57,7 +57,9 @@
             </div>
 
             <a href="/dashboard" class="toggle-btn">Dashboard</a>
+            {% if session.get('role') == 'admin' %}
             <a href="/reset_db" class="danger-button">Reset Database</a>
+            {% endif %}
             </div>
         </div>
     </main>
