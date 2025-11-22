@@ -19,6 +19,10 @@
           <a href="{{ url_for('stock') }}" class="active"><i data-feather="shuffle"></i>Stock</a>
           <a href="{{ url_for('suppliers_page') }}"><i data-feather="users"></i>Suppliers</a>
           <a href="{{ url_for('reports') }}"><i data-feather="bar-chart-2"></i>Reports</a>
+          {% if session.get('role') == 'admin' %}
+          <a href="{{ url_for('users_page') }}"><i data-feather="shield"></i>Manage Users</a>
+          <a href="{{ url_for('logs_page') }}"><i data-feather="activity"></i>Logs</a>
+          {% endif %}
           <a href="{{ url_for('logout') }}"><i data-feather="log-out"></i>Logout</a>
           <a href="{{ url_for('settings') }}"><i data-feather="settings"></i>Settings</a>
         </nav>

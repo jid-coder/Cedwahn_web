@@ -1,17 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-<html>
-<head>
-  <title>Suppliers - Cedwahn IMS</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logs</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <script defer src="{{ url_for('static', filename='script.js') }}"></script>
-  </head>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
 <body>
   <div class="layout">
     <aside class="sidebar">
@@ -20,34 +17,37 @@
         <a href="{{ url_for('dashboard') }}"><i data-feather="home"></i>Dashboard</a>
         <a href="{{ url_for('items') }}"><i data-feather="box"></i>Items</a>
         <a href="{{ url_for('stock') }}"><i data-feather="shuffle"></i>Stock</a>
-        <a href="{{ url_for('suppliers_page') }}" class="active"><i data-feather="users"></i>Suppliers</a>
+        <a href="{{ url_for('suppliers_page') }}"><i data-feather="users"></i>Suppliers</a>
         <a href="{{ url_for('reports') }}"><i data-feather="bar-chart-2"></i>Reports</a>
-        {% if session.get('role') == 'admin' %}
         <a href="{{ url_for('users_page') }}"><i data-feather="shield"></i>Manage Users</a>
-        <a href="{{ url_for('logs_page') }}"><i data-feather="activity"></i>Logs</a>
-        {% endif %}
+        <a href="{{ url_for('logs_page') }}" class="active"><i data-feather="activity"></i>Logs</a>
         <a href="{{ url_for('logout') }}"><i data-feather="log-out"></i>Logout</a>
         <a href="{{ url_for('settings') }}"><i data-feather="settings"></i>Settings</a>
       </nav>
     </aside>
     <main class="content">
-      <h2><i data-feather="users"></i> Suppliers</h2>
-
-  <form class="card" onsubmit="return false;">
-      <div>
-    <input id="supplier-name" placeholder="Supplier name">
-    <input id="supplier-contact" placeholder="Phone / Email">
-    <button type="submit" onclick="addSupplier()"><i data-feather="user-plus"></i> Add Supplier</button>
-  </div>
-  </form>
-
-  <table id="suppliers-table" class="card" border="2">
-    <thead><tr><th>ID</th><th>Name</th><th>Contact</th><th>Action</th></tr></thead>
-    <tbody></tbody>
-  </table>
+      <h2><i data-feather="activity"></i> Activity Log</h2>
+      <table class="card">
+        <thead>
+          <tr>
+            <th>Action</th>
+            <th>Timestamp</th>
+            <th>User</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in logs %}
+          <tr>
+            <td>{{ l.action }}</td>
+            <td>{{ l.timestamp }}</td>
+            <td>{{ l.username }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </main>
   </div>
-  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <script src="/static/script.js"></script>
   <script src="https://unpkg.com/feather-icons"></script>
   <script>try{feather.replace()}catch(e){}</script>
 </body>

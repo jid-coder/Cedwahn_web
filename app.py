@@ -2,7 +2,7 @@ import os
 import sqlite3
 import hashlib
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from werkzeug.security import check_password_hash, generate_password_hash
 from reportlab.lib.pagesizes import A4
@@ -11,6 +11,7 @@ from flask import send_from_directory
 
 app = Flask(__name__)
 app.secret_key = "super_secret_ims_key"
+app.permanent_session_lifetime = timedelta(days=30)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "database.db")
@@ -30,7 +31,9 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL
+            password_hash TEXT NOT NULL,
+            role TEXT DEFAULT 'staff',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
         """
     )
@@ -82,6 +85,29 @@ def init_db():
         )
         """
     )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS activity_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            action TEXT,
+            timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+        """
+    )
+
+    cur.execute("PRAGMA table_info(users)")
+    cols = {row[1] for row in cur.fetchall()}
+
+    if "role" not in cols:
+        cur.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'staff'")
+
+    if "created_at" not in cols:
+        cur.execute("ALTER TABLE users ADD COLUMN created_at TEXT")
+        cur.execute("UPDATE users SET created_at = COALESCE(created_at, datetime('now'))")
+
 
     cur.execute("PRAGMA table_info(items)")
     cols = {row[1] for row in cur.fetchall()}
@@ -135,11 +161,34 @@ def admin_required(f):
         return f(*args, **kwargs)
     return wrapper
 
+def log_action(user_id, action):
+    db = get_db()
+    db.execute("INSERT INTO activity_log (user_id, action) VALUES (?, ?)", (user_id, action))
+    db.commit()
+
 @app.before_request
 def ensure_db():
     if not os.path.exists(DB_PATH):
         open(DB_PATH, "a").close()
         init_db()
+
+@app.before_request
+def session_timeout():
+    if "user_id" in session:
+        now = datetime.utcnow()
+        last = session.get("last_active", now)
+        session["last_active"] = now.isoformat()
+
+        # 30-minute inactivity logout
+        max_idle = timedelta(minutes=30)
+
+        if isinstance(last, str):
+            last = datetime.fromisoformat(last)
+
+        if now - last > max_idle:
+            session.clear()
+            return redirect(url_for("login"))
+
 
 @app.route("/")
 def index():
@@ -168,9 +217,17 @@ def login():
                 valid = (user["password_hash"] == hashlib.sha256(password.encode()).hexdigest())
         if valid:
             session.clear()
+            remember = request.form.get("remember")
+            session.permanent = True if remember else False
             session["user_id"] = user["id"]
             session["username"] = username
             session["role"] = user["role"]
+            session["last_active"] = datetime.utcnow().isoformat()
+            session["remember"] = True if remember else False
+            try:
+                log_action(user["id"], "Logged in")
+            except Exception:
+                pass
             return redirect(url_for("dashboard"))
         error = "Invalid username or password"
 
@@ -194,7 +251,10 @@ def dashboard():
     low_stock = db.execute(
         "SELECT name, qty FROM items WHERE qty <= reorder_level"
     ).fetchall()
-    return render_template('dashboard.html', total_items=total_items, total_qty=total_qty, total_moves=total_moves, low_stock=low_stock)
+    extra_stats = None
+    if session.get('role') == 'admin':
+        extra_stats = db.execute("SELECT COUNT(*) AS users_count FROM users").fetchone()["users_count"]
+    return render_template('dashboard.html', total_items=total_items, total_qty=total_qty, total_moves=total_moves, low_stock=low_stock, extra_stats=extra_stats)
 
 @app.route("/items", methods=["GET"]) 
 @login_required
@@ -244,6 +304,7 @@ def items_delete(item_id):
     cur.execute("DELETE FROM items WHERE id=?", (item_id,))
     conn.commit()
     conn.close()
+    log_action(session["user_id"], f"Deleted item {item_id}")
     return redirect(url_for("items"))
 
 @app.route("/stock", methods=["GET", "POST"]) 
@@ -374,6 +435,7 @@ def api_delete_item(item_id):
     cur.execute('DELETE FROM items WHERE id=?', (item_id,))
     conn.commit()
     conn.close()
+    log_action(session["user_id"], f"Deleted item {item_id}")
     return jsonify({"status": "deleted"})
 
 @app.route('/export_report')
@@ -490,16 +552,83 @@ def settings():
 @app.route('/reset_db')
 @admin_required
 def reset_db():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-
     db = get_db()
     db.execute("DELETE FROM items")
     db.execute("DELETE FROM suppliers")
     db.execute("DELETE FROM stock_transactions")
+    db.execute("DELETE FROM sqlite_sequence WHERE name IN('items','suppliers','stock_transactions')")
     db.commit()
+    log_action(session["user_id"], "Reset database")
 
     return redirect(url_for('settings'))
+
+@app.route('/users')
+@admin_required
+def users_page():
+    db = get_db()
+    users = db.execute("SELECT id, username, role, created_at FROM users").fetchall()
+    return render_template("users.html", users=users)
+
+@app.route('/users/create', methods=['POST'])
+@admin_required
+def create_user():
+    username = request.form.get("username")
+    password = request.form.get("password")
+    role = request.form.get("role", "staff")
+    if not username or not password:
+        return redirect(url_for("users_page"))
+    hashed = generate_password_hash(password)
+    db = get_db()
+    db.execute("INSERT INTO users(username, password_hash, role) VALUES (?, ?, ?)", (username, hashed, role))
+    db.commit()
+    log_action(session["user_id"], f"Created user {username} ({role})")
+    return redirect(url_for("users_page"))
+
+@app.route('/users/<int:uid>/delete', methods=['POST'])
+@admin_required
+def delete_user(uid):
+    if uid == session["user_id"]:
+        return redirect(url_for("users_page"))
+    db = get_db()
+    db.execute("DELETE FROM users WHERE id=?", (uid,))
+    db.commit()
+    log_action(session["user_id"], f"Deleted user {uid}")
+    return redirect(url_for("users_page"))
+
+@app.route('/logs')
+@admin_required
+def logs_page():
+    db = get_db()
+    logs = db.execute(
+        """
+        SELECT a.action, a.timestamp, u.username
+        FROM activity_log a
+        JOIN users u ON u.id = a.user_id
+        ORDER BY a.id DESC
+        """
+    ).fetchall()
+    return render_template("logs.html", logs=logs)
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    error = None
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        role = "staff"
+        if not username or not password:
+            error = "All fields are required."
+        else:
+            db = get_db()
+            existing = db.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+            if existing:
+                error = "Username already exists."
+            else:
+                hashed = generate_password_hash(password)
+                db.execute("INSERT INTO users(username, password_hash, role) VALUES (?, ?, ?)", (username, hashed, role))
+                db.commit()
+                return redirect(url_for("login"))
+    return render_template("register.html", error=error)
 
 if __name__ == "__main__":
     init_db()

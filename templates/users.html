@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Users</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">Cedwahn</div>
+      <nav>
+        <a href="{{ url_for('dashboard') }}"><i data-feather="home"></i>Dashboard</a>
+        <a href="{{ url_for('items') }}"><i data-feather="box"></i>Items</a>
+        <a href="{{ url_for('stock') }}"><i data-feather="shuffle"></i>Stock</a>
+        <a href="{{ url_for('suppliers_page') }}"><i data-feather="users"></i>Suppliers</a>
+        <a href="{{ url_for('reports') }}"><i data-feather="bar-chart-2"></i>Reports</a>
+        <a href="{{ url_for('users_page') }}" class="active"><i data-feather="shield"></i>Manage Users</a>
+        <a href="{{ url_for('logs_page') }}"><i data-feather="activity"></i>Logs</a>
+        <a href="{{ url_for('logout') }}"><i data-feather="log-out"></i>Logout</a>
+        <a href="{{ url_for('settings') }}"><i data-feather="settings"></i>Settings</a>
+      </nav>
+    </aside>
+    <main class="content">
+      <h2><i data-feather="shield"></i> User Management</h2>
+      <table class="card">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Created</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>{{ u.id }}</td>
+            <td>{{ u.username }}</td>
+            <td>{{ u.role }}</td>
+            <td>{{ u.created_at }}</td>
+            <td>
+              {% if u.id != session.get('user_id') %}
+              <form method="POST" action="/users/{{ u.id }}/delete">
+                <button type="submit" class="danger">Delete</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="card" style="margin-top:16px;">
+        <h3>Create New User</h3>
+        <form method="POST" action="/users/create">
+          <div class="grid-2">
+            <div>
+              <label>Username</label>
+              <input name="username" placeholder="Username" required>
+            </div>
+            <div>
+              <label>Password</label>
+              <input name="password" type="password" placeholder="Password" required>
+            </div>
+            <div>
+              <label>Role</label>
+              <select name="role" aria-label="Role"></select>
+                <option value="staff">Staff</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit">Create</button>
+        </form>
+      </div>
+    </main>
+  </div>
+  <script src="/static/script.js"></script>
+  <script src="https://unpkg.com/feather-icons"></script>
+  <script>try{feather.replace()}catch(e){}</script>
+</body>
+</html>
