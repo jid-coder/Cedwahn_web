@@ -266,6 +266,35 @@ def items():
     conn.close()
     return render_template("items.html", items=items)
 
+@app.route("/items/<int:item_id>/edit", methods=["GET", "POST"]) 
+@admin_required
+def edit_item(item_id):
+    db = get_db()
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        sku = request.form.get("sku", "").strip()
+        price = request.form.get("price", "0").strip()
+        qty = request.form.get("qty", "0").strip()
+        reorder = request.form.get("reorder_level", "5").strip()
+        try:
+            price_val = float(price)
+            qty_val = int(qty)
+            reorder_val = int(reorder)
+        except Exception:
+            return redirect(url_for("items"))
+        db.execute(
+            "UPDATE items SET name=?, sku=?, price=?, qty=?, reorder_level=? WHERE id=?",
+            (name, sku, price_val, qty_val, reorder_val, item_id)
+        )
+        db.commit()
+        log_action(session["user_id"], f"Updated item {item_id}")
+        return redirect(url_for("items"))
+    item = db.execute(
+        "SELECT id, name, sku, price, qty, reorder_level FROM items WHERE id=?",
+        (item_id,)
+    ).fetchone()
+    return render_template("edit_item.html", item=item)
+
 @app.route("/items/create", methods=["POST"]) 
 @login_required
 def items_create():
@@ -295,6 +324,8 @@ def items_create():
     conn.commit()
     conn.close()
     return redirect(url_for("items"))
+
+ 
 
 @app.route("/items/<int:item_id>/delete", methods=["POST"]) 
 @admin_required

@@ -6,7 +6,9 @@ async function loadItems() {
     tbody.innerHTML = '';
     data.forEach(i => {
       const tr = document.createElement('tr');
-      const actionHtml = (window.isAdmin ? `<button onclick="deleteItem(${i.id})"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3v3H4v2h16V6h-6V3z"></path><path d="M5 9l1 12h12l1-12H5z"></path></svg>Delete</button>` : '');
+      const editHtml = (window.isAdmin ? `<a href="/items/${i.id}/edit" class="btn">Edit</a>` : '');
+      const deleteHtml = (window.isAdmin ? `<button onclick="deleteItem(${i.id})"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3v3H4v2h16V6h-6V3z"></path><path d="M5 9l1 12h12l1-12H5z"></path></svg>Delete</button>` : '');
+      const actionHtml = `${editHtml} ${deleteHtml}`;
       tr.innerHTML = `
         <td>${i.id}</td>
         <td>${i.name}</td>
